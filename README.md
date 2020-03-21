@@ -1,4 +1,5 @@
 ---
+
 # Canvas Animation: Collisions
 Ball interactions solved with displacement & velocity vectors. 
 Impacts between different masses resolved using physics: 
