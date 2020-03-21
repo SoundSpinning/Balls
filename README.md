@@ -1,6 +1,7 @@
 ---
 
 # Canvas Animation: Collisions
+
 Ball interactions solved with displacement & velocity vectors. 
 Impacts between different masses resolved using physics: 
 conservation of momentum & kinetic energy. Energy losses allowed on 'impact' mode.
