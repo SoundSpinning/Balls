@@ -26,7 +26,7 @@ var radScale, velScale, ballMode, pushMode;
 var eCoeff;
 var allForms, allRadio, sliders;
 var buttons, pauseBut, playBut;
-var isRunning = true, requestId = 0;
+var isRunning = true;
 
 
 
@@ -60,11 +60,11 @@ window.onload = function init() {
   // 
   velScale = 1.0;
   radScale = 1.0;
-  diameter = 0.1*canvasW;
+  diameter = 0.09*canvasW;
   maxBallArea = Math.PI*Math.pow(diameter/2,2);  // max possible ball area
-  fillArea = 1.2;  // fraction of potential canvas area to fill with balls
+  fillArea = 0.8;  // fraction of potential canvas area to fill with balls
   nBalls = Math.floor(fillArea*canvasArea / maxBallArea);
-  maxVel = 25;  // max velocity (px/s) allowed in initial random balls
+  maxVel = 20;  // max velocity (px/s) allowed in initial random balls
 
   // 'coefficient of restitution' to account for energy losses/gains at impact.
   // between 0 (no bounce, balls stay together) & 1 (elastic bounce)
@@ -101,11 +101,11 @@ var AF = function(){
     };
     // pause / play
     buttons[1].onclick = function(e) {
-        requestAnimationFrame(mainLoop);
-        pauseBut.classList.toggle('no-show');
-        playBut.classList.toggle('no-show');
-        // toggle the value of isRunning
-        isRunning = !isRunning;
+      requestAnimationFrame(mainLoop);
+      pauseBut.classList.toggle('no-show');
+      playBut.classList.toggle('no-show');
+      // toggle the value of isRunning
+      isRunning = !isRunning;
     };
 
     // deal with all controls
@@ -123,17 +123,17 @@ var AF = function(){
   // 
   var mainLoop = function(time){
     if (isRunning) {
-    // frames/s
-    measureFPS(time);
-    // number of ms since last animation frame
-    delta = timer(time);
-    // clear canvas
-    clearCanvas();
-    // update and draw balls
-    updateBalls(delta);
-
-    // call the animation loop every 1/60th of a second if not paused
-    requestAnimationFrame(mainLoop);
+      // frames/s
+      measureFPS(time);
+      // number of ms since last animation frame
+      delta = timer(time);
+      // clear canvas
+      clearCanvas();
+      // update and draw balls
+      updateBalls(ballMode);
+  
+      // call the animation loop every 1/60th of a second if not paused
+      requestAnimationFrame(mainLoop);
     };
   };
 
@@ -141,23 +141,15 @@ var AF = function(){
   // 
   // call all main Ball functions to update balls
   // 
-  function updateBalls(delta) {
-    // test each ball : ball : walls, then move & draw
-    // 
-    // test for collisions between balls
-    bounceTestBalls(ballMode);
-    for (var i=0; i < ballArray.length; i++) {
-      var ball = ballArray[i];
-      // ball scaling wrt canvas vertical location
-      scaleBalls(ball);
-      // test if each ball collides with a wall
-      collisionTestWithWalls(ball);
-      // move the ball
-      ball.move();
-      // draw the ball
-      ball.draw();
-    };
-  }
+  // function updateBalls(delta) {
+  //   // test each ball : ball : walls, then move & draw
+  //   // 
+  //   // 1) ball scaling wrt canvas vertical location
+  //   // 2) test if each ball collides with a wall
+  //   // 3) move the ball --> draw the ball
+  //   // 4) test for collisions between balls for different modes
+  //   bounceTestBalls(ballMode);
+  // }
 
 
 	// generate balls
@@ -206,27 +198,47 @@ var AF = function(){
     };
   }
 
-  // interaction mode & detection ball : ball
-  // 3 modes
-  function bounceTestBalls(ballMode) {
+  // 
+  // test collisions ball : ball : walls, then move & draw
+  // 
+  // 1) ball scaling wrt canvas vertical location
+  // 2) test if each ball collides with a wall
+  // 3) move the ball --> draw the ball
+  // 4) test for collisions between balls for the different 4 modes
+  function updateBalls(ballMode) {
     var jBalls = ballArray, iBalls = ballArray;
     for (var i = 0; i < iBalls.length; i++) {
       iBall = iBalls[i];
-      for (var j = i+1; j < jBalls.length; j++) {
+      // ball scaling wrt canvas vertical location
+      scaleBalls(iBall);
+      // test if each ball collides with a wall
+      collisionTestWithWalls(iBall);
+      // move the ball
+      iBall.move();
+      // draw the ball
+      iBall.draw();
+
+      for (var j = 0; j < jBalls.length; j++) {
         jBall = jBalls[j];
-        // if (j === i) { continue; };
+        if (j === i) { continue; };
         var dx = jBall.x - iBall.x;
         var dy = jBall.y - iBall.y;
         var target = jBall.radius + iBall.radius;
+
+        // this tries to discard from the loop balls far enough from each other
+        if (target > diameter*scaleBalls) { continue; };
+        
         var nAxis = [dx, dy];  // normal axis array between ball centres
         var dist = magVect(nAxis);  // calculate vector magnitude
         // when contact occurs do something...
         // All interaction modes are here
-        if (dist <= target) {
+        // if (dist <= target) {
+        if (!(dist > target)) {
           // balls contact so push back...
           var nX = dx / dist;  // normal COS vector
           var nY = dy / dist;  // normal SIN vector
           // find coordinates for the contact point between balls i & j
+          // this is used later on to plot gradients
           var contactX = iBall.x + iBall.radius*nX;
           var contactY = iBall.y + iBall.radius*nY;
           
@@ -242,9 +254,8 @@ var AF = function(){
               jBall.y = contactY + (nY * jBall.radius);
 
               canvasCtx.globalAlpha = 1;
-
               // reset hit counter when overlaps occur
-              if (dist < target) {
+              if (dist < target-1) {
                 nHits --;
               }
               // hit counter
@@ -252,6 +263,7 @@ var AF = function(){
               ballsContainer.innerHTML = '| Balls: ' + nBalls + 
                 ' | Aprox Hits: ' + formatNumber(Math.floor(nHits/fps));
               break;
+
             case "Push 2":
             // push 2
             // 
@@ -260,7 +272,7 @@ var AF = function(){
               iBall.y = contactY - (nY * iBall.radius);
               jBall.x = contactX + (nX * jBall.radius);
               jBall.y = contactY + (nY * jBall.radius);
-              // redraw balls more often than case 0
+              // update balls more often than case "Push 1"
               iBall.move(); jBall.move();
 
               canvasCtx.globalAlpha = 1;
@@ -274,6 +286,7 @@ var AF = function(){
               ballsContainer.innerHTML = '| Balls: ' + nBalls + 
                 ' | Aprox Hits: ' + formatNumber(Math.floor(nHits/fps));
               break;
+
             case "Through":
             // passive, see thru, only gradients change
             // 
@@ -308,10 +321,11 @@ var AF = function(){
               ballsContainer.innerHTML = '| Balls: ' + nBalls + 
                 ' | Aprox Crossings: ' + formatNumber(Math.floor(nHits/fps));
               break;
+
             case "Impact":
             // impacts based on physics laws
             // 
-              // the check below is to undo ball overlaps at the start
+              // the check below is to undo ball overlaps at the switch to 'Impact'
               if (dist < target) { 
                 // relocate balls to push around each other
                 iBall.x = contactX - (nX * iBall.radius);
@@ -388,8 +402,7 @@ var AF = function(){
               ballsContainer.innerHTML = '| Balls: ' + nBalls + 
                 ' | Aprox Hits: ' + formatNumber(Math.floor(nHits));
               break;
-
-            };
+          };
 
           // ball gradients when hit
           // 
@@ -422,17 +435,17 @@ var AF = function(){
     if (ball.x < ball.radius) {
       	ball.x = ball.radius;
       	ball.vx *= -1;
-    } 
+    }
+    // up
+    if (ball.y < ball.radius) {
+        ball.y = ball.radius;
+        ball.vy *= -1;
+    }
     // right
     if (ball.x > canvasW - ball.radius) {
       	ball.x = canvasW - ball.radius;
       	ball.vx *= -1; 
     }     
-    // up
-    if (ball.y < ball.radius) {
-      	ball.y = ball.radius;
-      	ball.vy *= -1;
-    }
     // down
     if (ball.y > canvasH - ball.radius) {
       	ball.y = canvasH - ball.radius;
