@@ -95,9 +95,11 @@ var AF = function(){
     buttons = document.querySelectorAll('button');
     pauseBut = document.querySelector('.fa-pause');
     playBut = document.querySelector('.fa-play');
+    // restart
     buttons[0].onclick = function(e) { 
       location.reload();
-    }
+    };
+    // pause / play
     buttons[1].onclick = function(e) {
         requestAnimationFrame(mainLoop);
         pauseBut.classList.toggle('no-show');
@@ -210,9 +212,9 @@ var AF = function(){
     var jBalls = ballArray, iBalls = ballArray;
     for (var i = 0; i < iBalls.length; i++) {
       iBall = iBalls[i];
-      for (var j = 0; j < jBalls.length; j++) {
+      for (var j = i+1; j < jBalls.length; j++) {
         jBall = jBalls[j];
-        if (j === i) { continue; };
+        // if (j === i) { continue; };
         var dx = jBall.x - iBall.x;
         var dy = jBall.y - iBall.y;
         var target = jBall.radius + iBall.radius;
